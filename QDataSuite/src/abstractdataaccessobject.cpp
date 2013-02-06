@@ -88,4 +88,5 @@ uint qHash( const QVariant & var )
 
     // could not generate a hash for the given variant
     Q_ASSERT(false);
+    return 0;
 }

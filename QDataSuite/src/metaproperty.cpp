@@ -94,18 +94,24 @@ QString MetaProperty::columnName() const
     if(d->attributes.contains(QDATASUITE_PROPERTYMETADATA_SQL_COLUMNNAME))
         return d->attributes.value(QDATASUITE_PROPERTYMETADATA_SQL_COLUMNNAME);
 
-    QString result = QString(name());
+    if(isToManyRelationProperty()) {
+        QString result = QString(name());
 
-    if(isRelationProperty()) {
-        result.append("_fk");
-
-        MetaProperty reverse = reverseRelation();
+        MetaProperty reverse(reverseRelation());
         if(reverse.isValid()) {
-            result.append("_").append(reverse.metaObject().primaryKeyPropertyName());
+            result = QString(reverse.name());
         }
+
+        result.append("_fk_").append(reverseMetaObject().primaryKeyPropertyName());
+        return result;
+    }
+    else if(isToOneRelationProperty()) {
+        return QString(name())
+                .append("_fk_")
+                .append(reverseMetaObject().primaryKeyPropertyName());
     }
 
-    return result;
+    return QString(name());
 }
 
 bool MetaProperty::isReadOnly() const
@@ -167,6 +173,7 @@ MetaProperty::Cardinality MetaProperty::cardinality() const
                QString("The relation %1 has no cardinality. This is an internal error and should never happen.")
                .arg(name())
                .toLatin1());
+    return NoCardinality;
 }
 
 QString MetaProperty::reverseClassName() const

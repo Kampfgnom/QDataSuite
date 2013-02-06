@@ -3,6 +3,7 @@
 #include "databaseschema.h"
 #include "sqlquery.h"
 #include "sqlcondition.h"
+#include "persistentdataaccessobject.h"
 
 #include <QDataSuite/metaproperty.h>
 #include <QDataSuite/error.h>
@@ -28,17 +29,46 @@ public:
 
     QSqlDatabase database;
     mutable QDataSuite::Error lastError;
+    QHash<QString, PersistentDataAccessObjectBase *> persistentDataAccessObjects;
 
     static QHash<QString, SqlDataAccessObjectHelper *> helpersForConnection;
 };
 
 QHash<QString, SqlDataAccessObjectHelper *> SqlDataAccessObjectHelperPrivate::helpersForConnection;
 
+void SqlDataAccessObjectHelper::registerPersistentDataAccessObject(const QString &className,
+                                                                   PersistentDataAccessObjectBase *dataAccessObject)
+{
+    Q_ASSERT_X(!d->persistentDataAccessObjects.contains(className),
+               Q_FUNC_INFO,
+               QString("Persistent data access object %1 already registered.")
+               .arg(className).toLatin1());
+
+    d->persistentDataAccessObjects.insert(className, dataAccessObject);
+}
+
+PersistentDataAccessObjectBase *SqlDataAccessObjectHelper::persistentDataAccessObject(const QDataSuite::MetaObject &metaObject)
+{
+    QString className = QLatin1String(metaObject.className());
+    Q_ASSERT_X(d->persistentDataAccessObjects.contains(className),
+               Q_FUNC_INFO,
+               QString("No such persistent data access object %1. You have to register your objects.")
+               .arg(metaObject.className()).toLatin1());
+
+    return d->persistentDataAccessObjects.value(className);
+}
+
 SqlDataAccessObjectHelper::SqlDataAccessObjectHelper(const QSqlDatabase &database, QObject *parent) :
     QObject(parent),
     d(new SqlDataAccessObjectHelperPrivate)
 {
     d->database = database;
+    SqlQuery query(database);
+    query.prepare("PRAGMA foreign_keys = 1;");
+    if ( !query.exec()
+         || query.lastError().isValid()) {
+        setLastError(query);
+    }
 }
 
 SqlDataAccessObjectHelper::~SqlDataAccessObjectHelper()
@@ -60,6 +90,7 @@ SqlDataAccessObjectHelper *SqlDataAccessObjectHelper::forDatabase(const QSqlData
 
 QList<QVariant> SqlDataAccessObjectHelper::allKeys(const QDataSuite::MetaObject &metaObject) const
 {
+    qDebug("\n\nallKeys<%s>", qPrintable(metaObject.tableName()));
     SqlQuery query(d->database);
     query.clear();
     query.setTable(metaObject.tableName());
@@ -80,8 +111,11 @@ QList<QVariant> SqlDataAccessObjectHelper::allKeys(const QDataSuite::MetaObject 
     return result;
 }
 
-bool SqlDataAccessObjectHelper::readObject(const QDataSuite::MetaObject &metaObject, const QVariant &key, QObject *object)
+bool SqlDataAccessObjectHelper::readObject(const QDataSuite::MetaObject &metaObject,
+                                           const QVariant &key,
+                                           QObject *object)
 {
+    qDebug("\n\nreadObject<%s>(%s)", qPrintable(metaObject.tableName()), qPrintable(key.toString()));
     Q_ASSERT(object);
     Q_ASSERT(!key.isNull());
 
@@ -101,11 +135,12 @@ bool SqlDataAccessObjectHelper::readObject(const QDataSuite::MetaObject &metaObj
     }
 
     readQueryIntoObject(query, object);
-    return true;
+    return readRelatedObjects(metaObject, object);
 }
 
 bool SqlDataAccessObjectHelper::insertObject(const QDataSuite::MetaObject &metaObject, QObject *object)
 {
+    qDebug("\n\ninsertObject<%s>", qPrintable(metaObject.tableName()));
     Q_ASSERT(object);
 
     // Create main INSERT query
@@ -131,6 +166,7 @@ bool SqlDataAccessObjectHelper::insertObject(const QDataSuite::MetaObject &metaO
 
 bool SqlDataAccessObjectHelper::updateObject(const QDataSuite::MetaObject &metaObject, const QObject *object)
 {
+    qDebug("\n\nupdateObject<%s>", qPrintable(metaObject.tableName()));
     Q_ASSERT(object);
 
     // Create main UPDATE query
@@ -206,11 +242,12 @@ bool SqlDataAccessObjectHelper::adjustRelations(const QDataSuite::MetaObject &me
         // Only care for "XtoMany" relations, because these reside in other tables
         if(cardinality == QDataSuite::MetaProperty::ToManyCardinality
                 || cardinality == QDataSuite::MetaProperty::OneToManyCardinality) {
+            QDataSuite::MetaProperty reversePrimaryKey = property.reverseMetaObject().primaryKeyProperty();
 
             // Prepare a query, which resets the relation (set all foreign keys to NULL)
             SqlQuery resetRelationQuery(d->database);
             resetRelationQuery.setTable(property.tableName());
-            resetRelationQuery.addField(metaObject.primaryKeyProperty().columnName(), QVariant());
+            resetRelationQuery.addField(property.columnName(), QVariant());
             resetRelationQuery.setWhereCondition(SqlCondition(property.columnName(),
                                                               SqlCondition::EqualTo,
                                                               primaryKey));
@@ -224,7 +261,6 @@ bool SqlDataAccessObjectHelper::adjustRelations(const QDataSuite::MetaObject &me
 
             // Build an OR'd where clause, which matches all related objects
             QList<SqlCondition> relatedObjectsWhereClauses;
-            QDataSuite::MetaProperty reversePrimaryKey = property.reverseMetaObject().primaryKeyProperty();
             foreach(QObject *relatedObject, relatedObjects) {
                 relatedObjectsWhereClauses.append(SqlCondition(reversePrimaryKey.columnName(),
                                                                SqlCondition::EqualTo,
@@ -259,8 +295,116 @@ bool SqlDataAccessObjectHelper::adjustRelations(const QDataSuite::MetaObject &me
     return true;
 }
 
+bool SqlDataAccessObjectHelper::readRelatedObjects(const QDataSuite::MetaObject &metaObject,
+                                                   QObject *object)
+{
+    // This static cache makes this method non-re-entrant!
+    // If we want some kind of thread safety someday, we have to do something about this
+    static QHash<QString, QHash<QVariant, QObject *> > alreadyReadObjectsPerTable;
+    static QObject *objectGraphRoot = 0;
+    if(!objectGraphRoot)
+        objectGraphRoot = object;
+
+    // Insert the current object into the cache
+    {
+        QHash<QVariant, QObject *> alreadyReadObjects = alreadyReadObjectsPerTable.value(metaObject.tableName());
+        alreadyReadObjects.insert(metaObject.primaryKeyProperty().read(object), object);
+        alreadyReadObjectsPerTable.insert(metaObject.tableName(), alreadyReadObjects);
+    }
+
+    foreach(const QDataSuite::MetaProperty property, metaObject.relationProperties()) {
+        QDataSuite::MetaProperty::Cardinality cardinality = property.cardinality();
+
+        QString className = property.reverseClassName();
+        PersistentDataAccessObjectBase *persistentDataAccessObject = d->persistentDataAccessObjects.value(className);
+        if(!persistentDataAccessObject)
+            continue;
+
+        // Get the already read objects of the related table
+        QHash<QVariant, QObject *> alreadyReadRelatedObjects = alreadyReadObjectsPerTable.value(
+                    property.reverseMetaObject().className());
+
+        if(cardinality == QDataSuite::MetaProperty::ToOneCardinality
+                || cardinality == QDataSuite::MetaProperty::ManyToOneCardinality) {
+            QVariant foreignKey = object->property(property.columnName().toLatin1());
+            if(foreignKey.isNull())
+                continue;
+
+            QObject *relatedObject = 0;
+            if(alreadyReadRelatedObjects.contains(foreignKey)) {
+                relatedObject = alreadyReadRelatedObjects.value(foreignKey);
+            }
+            else {
+                relatedObject = persistentDataAccessObject->readObject(foreignKey);
+            }
+
+            // If the related object has no parent yet,
+            // and is not itself,
+            // and is not the root of the object graph, which will be build,
+            // set our object as parent
+            if(relatedObject
+                    && !relatedObject->parent()
+                    && relatedObject != object
+                    && relatedObject != objectGraphRoot) {
+                relatedObject->setParent(object);
+            }
+
+            QVariant value = QDataSuite::MetaObject::variantCast(relatedObject, className);
+
+            // Write the value even if it is NULL
+            object->setProperty(property.name(), value);
+        }
+        else if(cardinality == QDataSuite::MetaProperty::ToManyCardinality
+                || cardinality == QDataSuite::MetaProperty::OneToManyCardinality) {
+            // Construct a query, which selects all rows,
+            // which have our primary key as foreign
+            SqlQuery selectForeignKeysQuery(d->database);
+            selectForeignKeysQuery.setTable(property.tableName()); // select from foreign table
+            selectForeignKeysQuery.addField(property.reverseMetaObject().primaryKeyProperty().columnName());
+            selectForeignKeysQuery.setWhereCondition(SqlCondition(property.columnName(),
+                                                                  SqlCondition::EqualTo,
+                                                                  metaObject.primaryKeyProperty().read(object)));
+            selectForeignKeysQuery.prepareSelect();
+
+            if ( !selectForeignKeysQuery.exec()
+                 || selectForeignKeysQuery.lastError().isValid()) {
+                setLastError(selectForeignKeysQuery);
+                return false;
+            }
+
+            QList<QObject *> relatedObjects;
+            while(selectForeignKeysQuery.next()) {
+                QVariant foreignKey = selectForeignKeysQuery.value(0);
+                QObject *relatedObject = 0;
+                if(alreadyReadRelatedObjects.contains(foreignKey)) {
+                    relatedObject = alreadyReadRelatedObjects.value(foreignKey);
+                }
+                else {
+                    relatedObject = persistentDataAccessObject->readObject(foreignKey);
+                }
+                relatedObjects.append(relatedObject);
+            }
+            QVariant value = QDataSuite::MetaObject::variantListCast(relatedObjects, className);
+            object->setProperty(property.name(), value);
+        }
+        else if(cardinality == QDataSuite::MetaProperty::ManyToManyCardinality) {
+            Q_ASSERT_X(false, Q_FUNC_INFO, "ManyToManyCardinality relations are not supported yet.");
+        }
+        else if(cardinality == QDataSuite::MetaProperty::OneToOneCardinality) {
+            Q_ASSERT_X(false, Q_FUNC_INFO, "OneToOneCardinality relations are not supported yet.");
+        }
+    }
+
+    // clear the caches
+    alreadyReadObjectsPerTable.clear();
+    objectGraphRoot = 0;
+
+    return true;
+}
+
 bool SqlDataAccessObjectHelper::removeObject(const QDataSuite::MetaObject &metaObject, const QObject *object)
 {
+    qDebug("\n\nremoveObject<%s>", qPrintable(metaObject.tableName()));
     Q_ASSERT(object);
 
     SqlQuery query(d->database);

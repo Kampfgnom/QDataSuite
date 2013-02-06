@@ -3,6 +3,7 @@
 
 #include <QDataSuite/abstractdataaccessobject.h>
 
+#include <QPersistence/sqldataaccessobjecthelper.h>
 #include <QDataSuite/metaobject.h>
 #include <QtCore/QSharedDataPointer>
 #include <QtSql/QSqlDatabase>
@@ -17,34 +18,64 @@ namespace QPersistence {
 
 class SqlDataAccessObjectHelper;
 
-template<class T>
-class PersistentDataAccessObject : public QDataSuite::AbstractDataAccessObject
+class PersistentDataAccessObjectBasePrivate;
+class PersistentDataAccessObjectBase : public QDataSuite::AbstractDataAccessObject
 {
+    Q_OBJECT
 public:
-    explicit PersistentDataAccessObject(const QSqlDatabase &database = QSqlDatabase::database(), QObject *parent = 0);
+    explicit PersistentDataAccessObjectBase(const QMetaObject &metaObject,
+                                            const QSqlDatabase &database = QSqlDatabase::database(),
+                                            QObject *parent = 0);
+    ~PersistentDataAccessObjectBase();
+
+    SqlDataAccessObjectHelper *sqlDataAccessObjectHelper() const;
+    QDataSuite::MetaObject dataSuiteMetaObject() const;
 
     QList<QVariant> allKeys() const Q_DECL_OVERRIDE;
     QList<QObject *> readAllObjects() const Q_DECL_OVERRIDE;
-    QObject *createObject() const Q_DECL_OVERRIDE;
     QObject *readObject(const QVariant &key) const Q_DECL_OVERRIDE;
     bool insertObject(QObject *const object) Q_DECL_OVERRIDE;
     bool updateObject(QObject *const object) Q_DECL_OVERRIDE;
     bool removeObject(QObject *const object) Q_DECL_OVERRIDE;
 
-    QList<T *> readAll() const;
-    T *create() const;
-    T *read(const QVariant &key) const;
-    bool insert(T *const object);
-    bool update(T *const object);
-    bool remove(T *const object);
-
 private:
-    SqlDataAccessObjectHelper *m_sqlDataAccessObjectHelper;
-    QDataSuite::MetaObject m_metaObject;
+    QSharedDataPointer<PersistentDataAccessObjectBasePrivate> d;
+
+    Q_DISABLE_COPY(PersistentDataAccessObjectBase)
 };
 
-} // namespace QPersistence
+template<class T>
+class PersistentDataAccessObject : public PersistentDataAccessObjectBase
+{
+public:
+    explicit PersistentDataAccessObject(const QSqlDatabase &database = QSqlDatabase::database(), QObject *parent = 0) :
+        PersistentDataAccessObjectBase(T::staticMetaObject, database, parent)
+    {
+    }
 
-#include "persistentdataaccessobject.cpp"
+    QList<T *> readAll() const
+    {
+        QList<T *> result;
+        Q_FOREACH(QObject *object, readAllObjects()) result.append(static_cast<T *>(object));
+        return result;
+    }
+
+    QObject *createObject() const Q_DECL_OVERRIDE { return new T; }
+    T *create() const { return static_cast<T *>(createObject()); }
+    T *read(const QVariant &key) const { return static_cast<T *>(readObject(key)); }
+    bool insert(T *const object) { return insertObject(object); }
+    bool update(T *const object) { return updateObject(object); }
+    bool remove(T *const object) { return removeObject(object); }
+};
+
+template<class T>
+void registerPersistentDataAccessObject(PersistentDataAccessObjectBase *dataAccessObject)
+{
+    dataAccessObject->sqlDataAccessObjectHelper()->registerPersistentDataAccessObject(
+                QLatin1String(dataAccessObject->dataSuiteMetaObject().className()),
+                dataAccessObject);
+}
+
+} // namespace QPersistence
 
 #endif // QPERSISTENCE_PERSISTENTDATAACCESSOBJECT_H

@@ -1,133 +1,99 @@
 #include <QPersistence/persistentdataaccessobject.h>
 
-#include <QPersistence/sqldataaccessobjecthelper.h>
 #include <QDataSuite/error.h>
 #include <QtCore/QVariant>
 
 namespace QPersistence {
 
-template<class T>
-PersistentDataAccessObject<T>::PersistentDataAccessObject(const QSqlDatabase &database, QObject *parent) :
+class PersistentDataAccessObjectBasePrivate : public QSharedData
+{
+public:
+    SqlDataAccessObjectHelper *sqlDataAccessObjectHelper;
+    QDataSuite::MetaObject metaObject;
+};
+
+PersistentDataAccessObjectBase::PersistentDataAccessObjectBase(const QMetaObject &metaObject,
+                                                               const QSqlDatabase &database,
+                                                               QObject *parent) :
     AbstractDataAccessObject(parent),
-    m_sqlDataAccessObjectHelper(SqlDataAccessObjectHelper::forDatabase(database)),
-    m_metaObject(QDataSuite::MetaObject::metaObject(T::staticMetaObject))
-{}
-
-
-template<class T>
-QList<QVariant> PersistentDataAccessObject<T>::allKeys() const
+    d(new PersistentDataAccessObjectBasePrivate)
 {
-    QList<QVariant> result = m_sqlDataAccessObjectHelper->allKeys(m_metaObject);
+    d->sqlDataAccessObjectHelper = SqlDataAccessObjectHelper::forDatabase(database);
+    d->metaObject = QDataSuite::MetaObject::metaObject(metaObject);
+}
 
-    if(m_sqlDataAccessObjectHelper->lastError().isValid())
-        setLastError(m_sqlDataAccessObjectHelper->lastError());
+PersistentDataAccessObjectBase::~PersistentDataAccessObjectBase()
+{
+}
+
+SqlDataAccessObjectHelper *PersistentDataAccessObjectBase::sqlDataAccessObjectHelper() const
+{
+    return d->sqlDataAccessObjectHelper;
+}
+
+QDataSuite::MetaObject PersistentDataAccessObjectBase::dataSuiteMetaObject() const
+{
+    return d->metaObject;
+}
+
+QList<QVariant> PersistentDataAccessObjectBase::allKeys() const
+{
+    QList<QVariant> result = d->sqlDataAccessObjectHelper->allKeys(d->metaObject);
+
+    if(d->sqlDataAccessObjectHelper->lastError().isValid())
+        setLastError(d->sqlDataAccessObjectHelper->lastError());
 
     return result;
 }
 
-template<class T>
-QList<T *> PersistentDataAccessObject<T>::readAll() const
-{
-    QList<T *> result;
-    Q_FOREACH(const QVariant key, allKeys()) result.append(read(key));
-    return result;
-}
-
-template<class T>
-QList<QObject *> PersistentDataAccessObject<T>::readAllObjects() const
+QList<QObject *> PersistentDataAccessObjectBase::readAllObjects() const
 {
     QList<QObject *> result;
-    Q_FOREACH(T *object, readAll()) result.append(object);
+    Q_FOREACH(const QVariant key, allKeys()) result.append(readObject(key));
     return result;
 }
 
-template<class T>
-T *PersistentDataAccessObject<T>::create() const
+QObject *PersistentDataAccessObjectBase::readObject(const QVariant &key) const
 {
-    return new T;
-}
+    QObject *object = createObject();
 
-template<class T>
-QObject *PersistentDataAccessObject<T>::createObject() const
-{
-    return create();
-}
-
-template<class T>
-T *PersistentDataAccessObject<T>::read(const QVariant &key) const
-{
-    T *t = create();
-
-    if(!m_sqlDataAccessObjectHelper->readObject(m_metaObject, key, t)) {
-        setLastError(m_sqlDataAccessObjectHelper->lastError());
-        delete t;
+    if(!d->sqlDataAccessObjectHelper->readObject(d->metaObject, key, object)) {
+        setLastError(d->sqlDataAccessObjectHelper->lastError());
+        delete object;
         return nullptr;
     }
 
-    return t;
+    return object;
 }
 
-template<class T>
-QObject *PersistentDataAccessObject<T>::readObject(const QVariant &key) const
+bool PersistentDataAccessObjectBase::insertObject(QObject * const object)
 {
-    return read(key);
-}
-
-template<class T>
-bool PersistentDataAccessObject<T>::insert(T * const object)
-{
-    if(!m_sqlDataAccessObjectHelper->insertObject(m_metaObject, object)) {
-        setLastError(m_sqlDataAccessObjectHelper->lastError());
+    if(!d->sqlDataAccessObjectHelper->insertObject(d->metaObject, object)) {
+        setLastError(d->sqlDataAccessObjectHelper->lastError());
         return false;
     }
 
     return true;
 }
 
-template<class T>
-bool PersistentDataAccessObject<T>::insertObject(QObject *const object)
+bool PersistentDataAccessObjectBase::updateObject(QObject *const object)
 {
-    T * const t = qobject_cast<T * const>(object);
-    Q_ASSERT(t);
-    return insert(t);
-}
-
-template<class T>
-bool PersistentDataAccessObject<T>::update(T *const object)
-{
-    if(!m_sqlDataAccessObjectHelper->updateObject(m_metaObject, object)) {
-        setLastError(m_sqlDataAccessObjectHelper->lastError());
+    if(!d->sqlDataAccessObjectHelper->updateObject(d->metaObject, object)) {
+        setLastError(d->sqlDataAccessObjectHelper->lastError());
         return false;
     }
 
     return true;
 }
 
-template<class T>
-bool PersistentDataAccessObject<T>::updateObject(QObject *const object)
+bool PersistentDataAccessObjectBase::removeObject(QObject *const object)
 {
-    T *t = qobject_cast<T *>(object);
-    Q_ASSERT(t);
-    return update(t);
-}
-
-template<class T>
-bool PersistentDataAccessObject<T>::remove(T *const object)
-{
-    if(m_sqlDataAccessObjectHelper->removeObject(m_metaObject, object)) {
-        setLastError(m_sqlDataAccessObjectHelper->lastError());
+    if(d->sqlDataAccessObjectHelper->removeObject(d->metaObject, object)) {
+        setLastError(d->sqlDataAccessObjectHelper->lastError());
         return false;
     }
 
     return true;
-}
-
-template<class T>
-bool PersistentDataAccessObject<T>::removeObject(QObject *const object)
-{
-    T *t = qobject_cast<T *>(object);
-    Q_ASSERT(t);
-    return remove(t);
 }
 
 } // namespace QPersistence

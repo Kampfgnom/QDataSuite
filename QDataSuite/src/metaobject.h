@@ -55,6 +55,8 @@ public:
     static void registerConverter(int variantType, ConverterBase *converter);
     static QObject *objectCast(const QVariant &variant);
     static QList<QObject *> objectListCast(const QVariant &variant);
+    static QVariant variantCast(QObject *object, const QString &className = QString());
+    static QVariant variantListCast(QList<QObject *> objects, const QString &className);
 
     static MetaObject metaObject(const QMetaObject *metaObject);
     static MetaObject metaObject(const QMetaObject &metaObject);
@@ -74,6 +76,9 @@ public:
     virtual ~ConverterBase() {}
     virtual QList<QObject *> convertList(const QVariant &variant) const = 0;
     virtual QObject *convertObject(const QVariant &variant) const = 0;
+    virtual QVariant convertVariant(QObject *object) const = 0;
+    virtual QVariant convertVariantList(QList<QObject *> objects) const = 0;
+    virtual QString className() const = 0;
 };
 
 template<class O>
@@ -93,6 +98,24 @@ public:
     {
         return variant.value<O *>();
     }
+
+    QVariant convertVariant(QObject *object) const
+    {
+        return QVariant::fromValue<O *>(static_cast<O *>(object));
+    }
+
+    QVariant convertVariantList(QList<QObject *> objects) const
+    {
+        QList<O *> result;
+        Q_FOREACH(QObject *object, objects) result.append(static_cast<O *>(object));
+        return QVariant::fromValue<QList<O *> >(result);
+    }
+
+    QString className() const
+    {
+        return QLatin1String(O::staticMetaObject.className());
+    }
+
 };
 
 template<class T>

@@ -13,6 +13,11 @@ namespace QPersistence {
 
 class SqlQueryPrivate : public QSharedData {
 public:
+    SqlQueryPrivate() :
+        QSharedData(),
+        limit(-1)
+    {}
+
     QString table;
     QHash<QString, QVariant> fields;
     int limit;
@@ -25,7 +30,6 @@ SqlQuery::SqlQuery() :
     QSqlQuery(),
     d(new SqlQueryPrivate)
 {
-    d->limit = -1;
 }
 
 SqlQuery::SqlQuery(const QSqlDatabase &database) :

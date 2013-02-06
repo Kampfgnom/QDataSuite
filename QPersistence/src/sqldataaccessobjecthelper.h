@@ -16,6 +16,7 @@ class QSqlQuery;
 namespace QPersistence {
 
 class SqlQuery;
+class PersistentDataAccessObjectBase;
 
 class SqlDataAccessObjectHelperPrivate;
 class SqlDataAccessObjectHelper : public QObject
@@ -31,8 +32,12 @@ public:
     bool insertObject(const QDataSuite::MetaObject &metaObject, QObject *object);
     bool updateObject(const QDataSuite::MetaObject &metaObject, const QObject *object);
     bool removeObject(const QDataSuite::MetaObject &metaObject, const QObject *object);
+    bool readRelatedObjects(const QDataSuite::MetaObject &metaObject, QObject *object);
 
     QDataSuite::Error lastError() const;
+
+    void registerPersistentDataAccessObject(const QString &className, PersistentDataAccessObjectBase *dataAccessObject);
+    PersistentDataAccessObjectBase *persistentDataAccessObject(const QDataSuite::MetaObject &metaObject);
 
 private:
     QSharedDataPointer<SqlDataAccessObjectHelperPrivate> d;
@@ -48,6 +53,10 @@ private:
     void readQueryIntoObject(const QSqlQuery &query,
                              QObject *object);
     bool adjustRelations(const QDataSuite::MetaObject &metaObject, const QObject *object);
+    bool readRelatedObjects(const QDataSuite::MetaObject &metaObject,
+                            QObject *object,
+                            QHash<QString, QHash<QVariant, QObject *> > &alreadyReadObjectsPerTable);
+
 };
 
 } // namespace QPersistence

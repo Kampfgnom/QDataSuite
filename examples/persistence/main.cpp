@@ -23,29 +23,35 @@ int main(int argc, char *argv[])
     // Register types
     QDataSuite::registerMetaObject<Series>();
     QDataSuite::registerMetaObject<Season>();
+    QPersistence::PersistentDataAccessObject<Series> seriesDao(db);
+    QPersistence::PersistentDataAccessObject<Season> seasonDao(db);
+    QPersistence::registerPersistentDataAccessObject<Series>(&seriesDao);
+    QPersistence::registerPersistentDataAccessObject<Season>(&seasonDao);
 
     // Drop and create tables
-    QPersistence::DatabaseSchema databaseSchema;
+    QPersistence::DatabaseSchema databaseSchema(db);
 //    databaseSchema.adjustSchema();
     databaseSchema.createCleanSchema();
 
     // Series
-    QPersistence::PersistentDataAccessObject<Series> seriesDao;
-    QPersistence::PersistentDataAccessObject<Season> seasonDao;
-
     QList<int> seriesids;
-    seriesids << 71663  // Simpsons
-              << 108611; // white collar
+    seriesids << 1  // Simpsons
+              << 2; // white collar
 
+    // Seasons
     QList<QList<int> > seasons;
-    seasons << QList<int>(); // Simpsons
-    seasons << (QList<int>() << 104251 << 242561); // White collar
+    seasons << (QList<int>() << 11 << 12); // Simpsons
+    seasons << (QList<int>() << 21 << 22); // White collar
 
     // Insert
     for(int i = 0; i < seriesids.size(); ++i) {
         Series *series = seriesDao.create();
         QScopedPointer<Series> s(series);
         series->setTvdbId(seriesids.at(i));
+
+        if(!seriesDao.insert(series)) {
+            qCritical() << seriesDao.lastError();
+        }
 
         QList<int> seasonIds = seasons.at(i);
         for(int j = 0; j < seasonIds.size(); ++j) {
@@ -58,26 +64,25 @@ int main(int argc, char *argv[])
                 qCritical() << seasonDao.lastError();
             }
         }
-
-        if(!seriesDao.insert(series)) {
-            qCritical() << seriesDao.lastError();
-        }
     }
 
     // Update
+    foreach(Season *season, seasonDao.readAll()) {
+        QScopedPointer<Season> s(season);
+        season->setNumber(123);
+        seasonDao.update(season);
+    }
+
     foreach(Series *series, seriesDao.readAll()) {
         QScopedPointer<Series> s(series);
         series->setImdbId("asd");
         seriesDao.update(series);
 
-        foreach(Season *season, seasonDao.readAll()) {
-            QScopedPointer<Season> s(season);
+        foreach(Season *season, series->seasons()) {
             season->setNumber(123);
-            season->setSeries(series);
             seasonDao.update(season);
         }
     }
-
 
     // Delete
     foreach(Series *series, seriesDao.readAll()) {

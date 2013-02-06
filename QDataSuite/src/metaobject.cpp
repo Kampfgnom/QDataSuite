@@ -17,13 +17,15 @@ public:
     {}
 
     static QHash<QString, MetaObject> metaObjects;
-    static QHash<int, ConverterBase *> converters;
+    static QHash<int, ConverterBase *> convertersByUserType;
+    static QHash<QString, ConverterBase *> convertersByClassName;
 
     void parseClassInfo();
 };
 
 QHash<QString, MetaObject> MetaObjectPrivate::metaObjects;
-QHash<int, ConverterBase *> MetaObjectPrivate::converters;
+QHash<int, ConverterBase *> MetaObjectPrivate::convertersByUserType;
+QHash<QString, ConverterBase *> MetaObjectPrivate::convertersByClassName;
 
 void MetaObjectPrivate::parseClassInfo()
 {
@@ -80,21 +82,39 @@ QList<MetaObject> MetaObject::registeredMetaObjects()
 
 void MetaObject::registerConverter(int variantType, ConverterBase *converter)
 {
-    MetaObjectPrivate::converters.insert(variantType, converter);
+    MetaObjectPrivate::convertersByUserType.insert(variantType, converter);
+    MetaObjectPrivate::convertersByClassName.insert(converter->className(), converter);
 }
 
 QObject *MetaObject::objectCast(const QVariant &variant)
 {
-    Q_ASSERT(MetaObjectPrivate::converters.contains(variant.userType()));
+    Q_ASSERT(MetaObjectPrivate::convertersByUserType.contains(variant.userType()));
 
-    return MetaObjectPrivate::converters.value(variant.userType())->convertObject(variant);
+    return MetaObjectPrivate::convertersByUserType.value(variant.userType())->convertObject(variant);
 }
 
 QList<QObject *> MetaObject::objectListCast(const QVariant &variant)
 {
-    Q_ASSERT(MetaObjectPrivate::converters.contains(variant.userType()));
+    Q_ASSERT(MetaObjectPrivate::convertersByUserType.contains(variant.userType()));
 
-    return MetaObjectPrivate::converters.value(variant.userType())->convertList(variant);
+    return MetaObjectPrivate::convertersByUserType.value(variant.userType())->convertList(variant);
+}
+
+QVariant MetaObject::variantCast(QObject *object, const QString &classN)
+{
+    QString className = classN;
+    if(className.isEmpty()) {
+        Q_ASSERT(object);
+        className = QLatin1String(object->metaObject()->className());
+    }
+    Q_ASSERT(MetaObjectPrivate::convertersByClassName.contains(className));
+    return MetaObjectPrivate::convertersByClassName.value(className)->convertVariant(object);
+}
+
+QVariant MetaObject::variantListCast(QList<QObject *> objects, const QString &className)
+{
+    Q_ASSERT(MetaObjectPrivate::convertersByClassName.contains(className));
+    return MetaObjectPrivate::convertersByClassName.value(className)->convertVariantList(objects);
 }
 
 MetaObject::MetaObject(const QMetaObject &metaObject) :
