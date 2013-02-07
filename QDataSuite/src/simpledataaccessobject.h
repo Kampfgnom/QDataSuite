@@ -15,6 +15,8 @@ class SimpleDataAccessObject : public AbstractDataAccessObject
 public:
     SimpleDataAccessObject(QObject *parent = 0);
 
+    QDataSuite::MetaObject dataSuiteMetaObject() const Q_DECL_OVERRIDE;
+
     QList<QVariant> allKeys() const Q_DECL_OVERRIDE;
     QList<QObject *> readAllObjects() const Q_DECL_OVERRIDE;
     QObject *createObject() const Q_DECL_OVERRIDE;

@@ -1,13 +1,12 @@
-#include "collectionresponder.h"
+#include "responder.h"
 
-#include "collection.h"
 #include "server.h"
-#include "global.h"
+#include "serializer.h"
+#include "parser.h"
 
-#include <QDataSuite/serializer.h>
-#include <QDataSuite/parser.h>
 #include <QDataSuite/metaobject.h>
 #include <QDataSuite/metaproperty.h>
+#include <QDataSuite/abstractdataaccessobject.h>
 
 #include <qhttprequest.h>
 #include <qhttpresponse.h>
@@ -25,7 +24,7 @@ public:
 
     QHttpRequest *req; // We need to delete the request
     QHttpResponse *resp;
-    Collection *collection;
+    QDataSuite::AbstractDataAccessObject *collection;
     QObject *object;
     Server *server;
 
@@ -60,7 +59,7 @@ void ResponderPrivate::serveResponse(const QByteArray &data, QHttpResponse::Stat
 
 void ResponderPrivate::serveError(const QDataSuite::Error &err)
 {
-    QDataSuite::Serializer *serializer = QDataSuite::Serializer::forFormat(formatFromRequest(req));
+    Serializer *serializer = Serializer::forFormat(Server::formatFromRequest(req));
     serveResponse(serializer->serialize(err),
                   err.additionalInformation().value(HttpStatusCode).value<QHttpResponse::StatusCode>());
 }
@@ -102,8 +101,8 @@ void ResponderPrivate::replyObject()
 
 void ResponderPrivate::serveCollection()
 {
-    QDataSuite::Serializer *serializer = QDataSuite::Serializer::forFormat(formatFromRequest(req));
-    QByteArray data;// = serializer->serialize(collection);
+    Serializer *serializer = Serializer::forFormat(Server::formatFromRequest(req));
+    QByteArray data = serializer->serialize(collection, server);
 
     if (serializer->lastError().isValid()) {
         serveError(serializer->lastError());
@@ -115,8 +114,7 @@ void ResponderPrivate::serveCollection()
 
 void ResponderPrivate::createObject()
 {
-    collection->resetLastError();
-    QObject *newObject = collection->createObjectInstance();
+    QObject *newObject = collection->createObject();
 
     if (collection->lastError().isValid()) {
         serveError(collection->lastError());
@@ -124,8 +122,8 @@ void ResponderPrivate::createObject()
         return;
     }
 
-    QDataSuite::Parser *parser = QDataSuite::Parser::forFormat(formatFromRequest(req));
-    parser->parse(req->body(), newObject, QDataSuite::Parser::Create);
+    Parser *parser = Parser::forFormat(Server::formatFromRequest(req));
+    parser->parse(req->body(), newObject, server, Parser::Create);
 
     if (parser->lastError().isValid()) {
         serveError(parser->lastError());
@@ -163,8 +161,8 @@ void ResponderPrivate::serveObject()
 
 void ResponderPrivate::serveObject(QObject *obj)
 {
-    QDataSuite::Serializer *serializer = QDataSuite::Serializer::forFormat(formatFromRequest(req));
-    QByteArray data = serializer->serialize(obj);
+    Serializer *serializer = Serializer::forFormat(Server::formatFromRequest(req));
+    QByteArray data = serializer->serialize(obj, server);
 
     if (serializer->lastError().isValid()) {
         serveError(serializer->lastError());
@@ -176,7 +174,6 @@ void ResponderPrivate::serveObject(QObject *obj)
 
 void ResponderPrivate::deleteObject()
 {
-    collection->resetLastError();
     collection->removeObject(object);
 
     if (collection->lastError().isValid()) {
@@ -189,15 +186,14 @@ void ResponderPrivate::deleteObject()
 
 void ResponderPrivate::updateObject()
 {
-    QDataSuite::Parser *parser = QDataSuite::Parser::forFormat(formatFromRequest(req));
-    parser->parse(req->body(), object, QDataSuite::Parser::Update);
+    Parser *parser = Parser::forFormat(Server::formatFromRequest(req));
+    parser->parse(req->body(), object, server, Parser::Update);
 
     if (parser->lastError().isValid()) {
         serveError(parser->lastError());
         return;
     }
 
-    collection->resetLastError();
     collection->updateObject(object);
 
     if (collection->lastError().isValid()) {
@@ -208,7 +204,11 @@ void ResponderPrivate::updateObject()
     serveObject();
 }
 
-Responder::Responder(QHttpRequest *req, QHttpResponse *resp, Server *server, Collection *collection, QObject *object) :
+Responder::Responder(QHttpRequest *req,
+                     QHttpResponse *resp,
+                     Server *server,
+                     QDataSuite::AbstractDataAccessObject *collection,
+                     QObject *object) :
     QObject(server),
     d(new ResponderPrivate)
 {
@@ -266,7 +266,7 @@ void Responder::serveError(QHttpResponse *resp,
                            const QDataSuite::Error &err,
                            const QString &format)
 {
-    QDataSuite::Serializer *serializer = QDataSuite::Serializer::forFormat(format);
+    Serializer *serializer = Serializer::forFormat(format);
     serve(resp,
           serializer->serialize(err),
           err.additionalInformation().value(HttpStatusCode).value<QHttpResponse::StatusCode>());

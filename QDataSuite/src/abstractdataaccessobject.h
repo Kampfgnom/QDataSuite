@@ -10,6 +10,7 @@ uint qHash(const QVariant & var);
 namespace QDataSuite {
 
 class Error;
+class MetaObject;
 
 class AbstractDataAccessObjectPrivate;
 class AbstractDataAccessObject : public QObject
@@ -17,6 +18,8 @@ class AbstractDataAccessObject : public QObject
     Q_OBJECT
 public:
     ~AbstractDataAccessObject();
+
+    virtual QDataSuite::MetaObject dataSuiteMetaObject() const = 0;
 
     virtual QList<QVariant> allKeys() const = 0;
     virtual QList<QObject *> readAllObjects() const = 0;

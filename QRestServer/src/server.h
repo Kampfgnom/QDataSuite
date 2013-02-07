@@ -13,13 +13,11 @@ class QHttpResponse;
 
 namespace QDataSuite {
 class Error;
+class AbstractDataAccessObject;
 }
 
 namespace QRestServer {
 
-QString formatFromRequest(QHttpRequest *req);
-
-class Collection;
 class LinkHelper;
 
 class ServerPrivate;
@@ -30,21 +28,20 @@ public:
     Server(QObject *parent = 0);
     ~Server();
 
-    void listen();
+    void listen(uint port);
 
-    void setPort(quint16 port);
-    quint16 port() const;
+    void setBaseUrl(const QUrl &baseUrl);
+    QUrl baseUrl() const;
 
-    void setBaseUrl(const QString &baseUrl);
-    QString baseUrl() const;
+    void addCollection(QDataSuite::AbstractDataAccessObject *collection);
+    QList<QDataSuite::AbstractDataAccessObject *> collections() const;
+    QDataSuite::AbstractDataAccessObject *collection(const QString &name);
 
-    void addCollection(Collection *collection);
-    QList<Collection *> collections() const;
-    Collection *collection(const QString &name);
+    LinkHelper *linkHelper() const;
 
-    LinkHelper *linkHelper();
+    static QString formatFromRequest(QHttpRequest *req);
 
-private slots:
+private Q_SLOTS:
     void dispatchRequest(QHttpRequest *req, QHttpResponse *resp);
 
 private:

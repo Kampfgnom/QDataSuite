@@ -1,12 +1,12 @@
 #include "serializer.h"
 
-#include "error.h"
-#include "metaproperty.h"
-#include "metaobject.h"
+#include <QDataSuite/error.h>
+#include <QDataSuite/metaproperty.h>
+#include <QDataSuite/metaobject.h>
 
 #include <QHash>
 
-namespace QDataSuite {
+namespace QRestServer {
 
 class SerializerPrivate : public QSharedData
 {
@@ -15,28 +15,14 @@ public:
         QSharedData()
     {}
 
-    mutable Error lastError;
+    mutable QDataSuite::Error lastError;
     QString format;
     QString contentType;
 
     static QHash<QString, Serializer *> serializers;
-
-    class Guard {
-    public:
-        ~Guard()
-        {
-            QHashIterator<QString, Serializer *> it(serializers);
-            while(it.hasNext()) {
-                it.next();
-                delete it.value();
-            }
-        }
-    };
-    static Guard guard; // deletes the serializers upon destruction
 };
 
 QHash<QString, Serializer *> SerializerPrivate::serializers;
-SerializerPrivate::Guard SerializerPrivate::guard;
 
 Serializer::Serializer(const QString &format, const QString &contentType) :
     d(new SerializerPrivate)
@@ -59,28 +45,28 @@ QString Serializer::format() const
     return d->format;
 }
 
-Error Serializer::lastError() const
+QDataSuite::Error Serializer::lastError() const
 {
     return d->lastError;
 }
 
-void Serializer::setLastError(const Error &error) const
+void Serializer::setLastError(const QDataSuite::Error &error) const
 {
     d->lastError = error;
 }
 
 void Serializer::resetLastError() const
 {
-    setLastError(Error());
+    setLastError(QDataSuite::Error());
 }
 
 QVariantMap Serializer::objectToVariant(const QObject *object)
 {
     QVariantMap result;
-    const MetaObject metaObject = MetaObject::metaObject(object);
+    const QDataSuite::MetaObject metaObject = QDataSuite::MetaObject::metaObject(object);
     int count = metaObject.propertyCount();
     for (int i = 1; i < count; ++i) {
-        MetaProperty metaProperty(metaObject.property(i), metaObject);
+        QDataSuite::MetaProperty metaProperty(metaObject.property(i), metaObject);
 
         if (!metaProperty.isReadable()
                 || !metaProperty.isStored()
@@ -103,8 +89,11 @@ Serializer *Serializer::forFormat(const QString &format)
     return SerializerPrivate::serializers.value(format);
 }
 
-void Serializer::addSerializer(Serializer *serializer)
+void Serializer::registerSerializer(Serializer *serializer)
 {
+    if(!SerializerPrivate::serializers.contains(QString()))
+        setDefaultSerializer(serializer);
+
     SerializerPrivate::serializers.insert(serializer->format(), serializer);
 }
 
@@ -113,5 +102,5 @@ void Serializer::setDefaultSerializer(Serializer *serializer)
     SerializerPrivate::serializers.insert(QString(), serializer);
 }
 
-} // namespace QDataSuite
+} // namespace QRestServer
 

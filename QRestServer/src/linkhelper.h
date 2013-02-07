@@ -3,6 +3,10 @@
 
 #include <QObject>
 
+namespace QDataSuite {
+class AbstractDataAccessObject;
+}
+
 namespace QRestServer {
 
 class Server;
@@ -14,13 +18,14 @@ class LinkHelper : public QObject
 public:
     explicit LinkHelper(Server *server);
 
-    QString objectLink(QObject *object);
+    QUrl objectLink(const QObject *object);
+    QUrl collectionLink(const QDataSuite::AbstractDataAccessObject *collection);
 
-    Collection *resolveCollectionPath(const QString &path);
+    QDataSuite::AbstractDataAccessObject *resolveCollectionPath(const QString &path);
     QObject *resolveObjectPath(const QString &path);
 
     QString collectionName(const QString &path);
-    QString objectKey(const QString &path);
+    QVariant objectKey(const QString &path);
 
 private:
     Server *m_server;

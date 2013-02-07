@@ -1,11 +1,10 @@
 #include "linkhelper.h"
 
-#include "collection.h"
-#include "global.h"
 #include "server.h"
 
 #include <QDataSuite/metaobject.h>
 #include <QDataSuite/metaproperty.h>
+#include <QDataSuite/abstractdataaccessobject.h>
 
 #include <QVariant>
 #include <QUrl>
@@ -19,25 +18,45 @@ LinkHelper::LinkHelper(Server *server) :
 {
 }
 
-QString LinkHelper::objectLink(QObject *object)
+QUrl LinkHelper::objectLink(const QObject *object)
 {
+    Q_ASSERT(object);
+
     QDataSuite::MetaObject metaObject = QDataSuite::MetaObject::metaObject(object);
 
     QVariant keyVariant = metaObject.primaryKeyProperty().read(object);
     Q_ASSERT(keyVariant.canConvert(QVariant::String));
-    QString key = keyVariant.toString();
 
+    QString key = keyVariant.toString();
     QString collectionName = metaObject.collectionName();
-    QString baseUrl = m_server->baseUrl();
 
     Q_ASSERT(!key.isEmpty());
     Q_ASSERT(!collectionName.isEmpty());
-    Q_ASSERT(!baseUrl.isEmpty());
 
-    return baseUrl + collectionName + '/' + key;
+    QUrl url = m_server->baseUrl();
+    QString path = url.path();
+    path.append(collectionName).append('/').append(key);
+    url.setPath(path);
+    return url;
 }
 
-Collection *LinkHelper::resolveCollectionPath(const QString &path)
+QUrl LinkHelper::collectionLink(const QDataSuite::AbstractDataAccessObject *collection)
+{
+    Q_ASSERT(collection);
+
+    QDataSuite::MetaObject metaObject = collection->dataSuiteMetaObject();
+    QString collectionName = metaObject.collectionName();
+
+    Q_ASSERT(!collectionName.isEmpty());
+
+    QUrl url = m_server->baseUrl();
+    QString path = url.path();
+    path.append(collectionName);
+    url.setPath(path);
+    return url;
+}
+
+QDataSuite::AbstractDataAccessObject *LinkHelper::resolveCollectionPath(const QString &path)
 {
     QString name = collectionName(path);
     return m_server->collection(name);
@@ -45,14 +64,13 @@ Collection *LinkHelper::resolveCollectionPath(const QString &path)
 
 QObject *LinkHelper::resolveObjectPath(const QString &path)
 {
-    Collection *collection = resolveCollectionPath(path);
+    QDataSuite::AbstractDataAccessObject *collection = resolveCollectionPath(path);
 
     if (!collection)
         return 0;
 
-    QString key = objectKey(path);
-
-    return collection->object(key);
+    QVariant key = objectKey(path);
+    return collection->readObject(key);
 }
 
 QString LinkHelper::collectionName(const QString &path)
@@ -64,13 +82,13 @@ QString LinkHelper::collectionName(const QString &path)
     return pathList.at(1);
 }
 
-QString LinkHelper::objectKey(const QString &path)
+QVariant LinkHelper::objectKey(const QString &path)
 {
     QStringList pathList = path.split('/');
     if (pathList.size() <= 2)
-        return QString();
+        return QVariant();
 
-    return pathList.at(2);
+    return QVariant(pathList.at(2));
 }
 
 } // namespace QRestServer

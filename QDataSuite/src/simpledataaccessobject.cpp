@@ -1,6 +1,9 @@
 #include <QDataSuite/simpledataaccessobject.h>
 
 #include <QDataSuite/metaproperty.h>
+#include <QDataSuite/metaobject.h>
+
+#include <QDebug>
 
 namespace QDataSuite {
 
@@ -9,6 +12,12 @@ SimpleDataAccessObject<T>::SimpleDataAccessObject(QObject *parent) :
     AbstractDataAccessObject(parent),
     m_metaObject(MetaObject::metaObject(T::staticMetaObject))
 {}
+
+template<class T>
+MetaObject SimpleDataAccessObject<T>::dataSuiteMetaObject() const
+{
+    return m_metaObject;
+}
 
 
 template<class T>
@@ -46,7 +55,13 @@ QObject *SimpleDataAccessObject<T>::createObject() const
 template<class T>
 T *SimpleDataAccessObject<T>::read(const QVariant &key) const
 {
-    return m_objects.value(key);
+    int type = m_metaObject.primaryKeyProperty().type();
+    Q_ASSERT(key.canConvert(type));
+
+    QVariant keyVariant(key);
+    keyVariant.convert(type);
+
+    return m_objects.value(keyVariant);
 }
 
 template<class T>

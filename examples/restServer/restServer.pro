@@ -1,8 +1,11 @@
 QDATASUITE_PATH = ../../QDataSuite
 include($$QDATASUITE_PATH/QDataSuite.pri)
 
-QPERSISTENCE_PATH = ../../QPersistence
-include($$QPERSISTENCE_PATH/QPersistence.pri)
+QRESTSERVER_PATH = ../../QRestServer
+include($$QRESTSERVER_PATH/QRestServer.pri)
+
+QHAL_PATH = ../../QRestServer/lib/QHal
+include($$QHAL_PATH/QHal.pri)
 
 include(../seriesModel/seriesModel.pri)
 
@@ -11,8 +14,8 @@ include(../seriesModel/seriesModel.pri)
 
 TARGET          = restserver_example
 VERSION         = 0.0.0
-TEMPLATE        = lib
-QT              += sql widgets
+TEMPLATE        = app
+QT              += sql widgets network
 CONFIG          += static libc++11
 QMAKE_CXXFLAGS  += $$QDATASUITE_COMMON_QMAKE_CXXFLAGS
 
@@ -23,10 +26,10 @@ INCLUDEPATH     += $$QDATASUITE_INCLUDEPATH
 LIBS            += $$QDATASUITE_LIBS
 
 
-### QPersistence ###
+### QRestServer ###
 
-INCLUDEPATH     += $$QPERSISTENCE_INCLUDEPATH
-LIBS            += $$QPERSISTENCE_LIBS
+INCLUDEPATH     += $$QRESTSERVER_INCLUDEPATH
+LIBS            += $$QRESTSERVER_LIBS
 
 
 ### seriesModel ###
@@ -34,8 +37,21 @@ LIBS            += $$QPERSISTENCE_LIBS
 INCLUDEPATH     += $$SERIESMODEL_INCLUDEPATH
 
 
+### QHttpServer ###
+
+INCLUDEPATH     += $$QHTTPSERVER_INCLUDEPATH
+LIBS            += $$QHTTPSERVER_LIBS
+
+
+### QHAL ###
+
+LIBS            += $$QHAL_LIBS
+INCLUDEPATH     += $$QHAL_INCLUDEPATH
+
+
 ### Files ###
 
 HEADERS +=
 
-SOURCES +=
+SOURCES += \
+    main.cpp

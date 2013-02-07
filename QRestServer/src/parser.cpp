@@ -1,10 +1,10 @@
 #include "parser.h"
 
-#include "error.h"
+#include <QDataSuite/error.h>
 
 #include <QHash>
 
-namespace QDataSuite {
+namespace QRestServer {
 
 class ParserPrivate : public QSharedData
 {
@@ -13,28 +13,14 @@ public:
         QSharedData()
     {}
 
-    mutable Error lastError;
+    mutable QDataSuite::Error lastError;
     QString format;
     QString contentType;
 
     static QHash<QString, Parser *> parsers;
-
-    class Guard {
-    public:
-        ~Guard()
-        {
-            QHashIterator<QString, Parser *> it(parsers);
-            while(it.hasNext()) {
-                it.next();
-                delete it.value();
-            }
-        }
-    };
-    static Guard guard; // deletes the parsers upon destruction
 };
 
 QHash<QString, Parser *> ParserPrivate::parsers;
-ParserPrivate::Guard ParserPrivate::guard;
 
 Parser::Parser(const QString &format, const QString &contentType) :
     d(new ParserPrivate)
@@ -57,19 +43,19 @@ QString Parser::format() const
     return d->format;
 }
 
-Error Parser::lastError() const
+QDataSuite::Error Parser::lastError() const
 {
     return d->lastError;
 }
 
-void Parser::setLastError(const Error &error) const
+void Parser::setLastError(const QDataSuite::Error &error) const
 {
     d->lastError = error;
 }
 
 void Parser::resetLastError() const
 {
-    setLastError(Error());
+    setLastError(QDataSuite::Error());
 }
 
 Parser *Parser::forFormat(const QString &format)
@@ -77,8 +63,11 @@ Parser *Parser::forFormat(const QString &format)
     return ParserPrivate::parsers.value(format);
 }
 
-void Parser::addParser(Parser *parser)
+void Parser::registerParser(Parser *parser)
 {
+    if(!ParserPrivate::parsers.contains(QString()))
+        setDefaultParser(parser);
+
     ParserPrivate::parsers.insert(parser->format(), parser);
 }
 
@@ -87,5 +76,5 @@ void Parser::setDefaultParser(Parser *parser)
     ParserPrivate::parsers.insert(QString(), parser);
 }
 
-} // namespace QDataSuite
+} // namespace QRestServer
 

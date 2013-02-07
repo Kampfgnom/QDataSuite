@@ -18,19 +18,11 @@ HEADERS += \
     metaproperty.h \
     error.h \
     metaobject.h \
-    serializer.h \
-    parser.h \
-    jsonserializer.h \
-    jsonparser.h \
     abstractdataaccessobject.h \
     simpledataaccessobject.h
 SOURCES += \
     metaproperty.cpp \
     error.cpp \
     metaobject.cpp \
-    serializer.cpp \
-    parser.cpp \
-    jsonserializer.cpp \
-    jsonparser.cpp \
     abstractdataaccessobject.cpp \
     simpledataaccessobject.cpp

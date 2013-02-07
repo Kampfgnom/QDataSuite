@@ -8,8 +8,12 @@ class QObject;
 class QString;
 
 namespace QDataSuite {
-
 class Error;
+}
+
+namespace QRestServer {
+
+class Server;
 
 class ParserPrivate;
 class Parser
@@ -19,25 +23,25 @@ public:
 
     QString contentType() const;
     QString format() const;
-    Error lastError() const;
+    QDataSuite::Error lastError() const;
 
     enum Mode { Update, Create };
-    virtual void parse(const QByteArray &data, QObject *object, Mode mode) const = 0;
+    virtual void parse(const QByteArray &data, QObject *object, Server *server, Mode mode) const = 0;
 
     static Parser *forFormat(const QString &format);
-    static void addParser(Parser *parser);
+    static void registerParser(Parser *parser);
     static void setDefaultParser(Parser *parser);
 
 protected:
     Parser(const QString &format, const QString &contentType);
 
-    void setLastError(const Error &error) const;
+    void setLastError(const QDataSuite::Error &error) const;
     void resetLastError() const;
 
 private:
     QSharedDataPointer<ParserPrivate> d;
 };
 
-} // namespace QDataSuite
+} // namespace QRestServer
 
 #endif // QRESTSERVER_PARSER_H

@@ -4,6 +4,9 @@ include($$QDATASUITE_PATH/QDataSuite.pri)
 QRESTSERVER_PATH = ..
 include($$QRESTSERVER_PATH/QRestServer.pri)
 
+QHAL_PATH = ../lib/QHal
+include($$QHAL_PATH/QHal.pri)
+
 ### General config ###
 
 TARGET          = $$QRESTSERVER_TARGET
@@ -27,19 +30,25 @@ LIBS            += $$QDATASUITE_LIBS
 INCLUDEPATH     += $$QHTTPSERVER_INCLUDEPATH
 LIBS            += $$QHTTPSERVER_LIBS
 
+### QHal ###
+
+INCLUDEPATH     += $$QHAL_INCLUDEPATH
+LIBS            += $$QHAL_LIBS
 
 ### Files ###
 
 HEADERS += \
-    collection.h \
     server.h \
-    global.h \
     linkhelper.h \
-    collectionresponder.h
+    responder.h \
+    serializer.h \
+    parser.h \
+    haljsonserializer.h
 
 SOURCES += \
     server.cpp \
-    global.cpp \
     linkhelper.cpp \
-    collection.cpp \
-    collectionresponder.cpp
+    responder.cpp \
+    serializer.cpp \
+    parser.cpp \
+    haljsonserializer.cpp
