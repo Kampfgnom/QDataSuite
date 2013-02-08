@@ -41,6 +41,7 @@ public:
 
     QString classInformation(const QString &informationName, bool assertNotEmpty = false) const;
     QString classInformation(const QString &informationName, const QString &defaultValue) const;
+    bool hasMetaProperty(const QString &name) const;
     MetaProperty metaProperty(const QString &name) const;
     QString tableName() const;
     QString collectionName() const;

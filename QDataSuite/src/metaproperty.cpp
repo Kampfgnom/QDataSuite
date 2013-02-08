@@ -264,20 +264,19 @@ QVariant::Type MetaProperty::foreignKeyType() const
     return QVariant::Invalid;
 }
 
-void MetaProperty::write(QObject *obj, const QVariant &value) const
+bool MetaProperty::write(QObject *obj, const QVariant &value) const
 {
     if (!isWritable())
-        return;
+        return false;
 
     QVariant::Type t = type();
     if (value.canConvert(t)) {
         QVariant v(value);
         v.convert(t);
-        QMetaProperty::write( obj, v );
+        return QMetaProperty::write( obj, v );
     }
-    else if (QLatin1String("QVariant") == QLatin1String(typeName())) {
-        QMetaProperty::write( obj, value );
-    }
+
+    return QMetaProperty::write( obj, value );
 }
 
 } // namespace QDataSuite

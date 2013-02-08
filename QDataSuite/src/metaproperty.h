@@ -52,7 +52,7 @@ public:
     QString tableName() const;
     QVariant::Type foreignKeyType() const;
 
-    void write(QObject *obj, const QVariant &value) const;
+    bool write(QObject *obj, const QVariant &value) const;
 
 private:
     QSharedDataPointer<MetaPropertyPrivate> d;

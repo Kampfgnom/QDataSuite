@@ -60,8 +60,10 @@ void ResponderPrivate::serveResponse(const QByteArray &data, QHttpResponse::Stat
 void ResponderPrivate::serveError(const QDataSuite::Error &err)
 {
     Serializer *serializer = Serializer::forFormat(Server::formatFromRequest(req));
-    serveResponse(serializer->serialize(err),
-                  err.additionalInformation().value(HttpStatusCode).value<QHttpResponse::StatusCode>());
+    QHttpResponse::StatusCode statusCode = err.additionalInformation().value(HttpStatusCode).value<QHttpResponse::StatusCode>();
+    if(statusCode == 0)
+        statusCode = QHttpResponse::STATUS_BAD_REQUEST;
+    serveResponse(serializer->serialize(err), statusCode);
 }
 
 void ResponderPrivate::replyCollection()
@@ -227,7 +229,7 @@ Responder::Responder(QHttpRequest *req,
 Responder::~Responder()
 {
     delete d->req;
-    d->req = 0;
+    d->req = nullptr;
 }
 
 void Responder::reply()

@@ -151,6 +151,12 @@ MetaObject &MetaObject::operator =(const MetaObject &other)
     return *this;
 }
 
+bool MetaObject::hasMetaProperty(const QString &name) const
+{
+    int index = indexOfProperty(name.toLatin1());
+    return index >= 0;
+}
+
 MetaProperty MetaObject::metaProperty(const QString &name) const
 {
     int index = indexOfProperty(name.toLatin1());

@@ -4,6 +4,7 @@
 #include "responder.h"
 #include "serializer.h"
 #include "haljsonserializer.h"
+#include "haljsonparser.h"
 
 #include <QDataSuite/abstractdataaccessobject.h>
 #include <QDataSuite/metaobject.h>
@@ -32,6 +33,7 @@ public:
     QHttpServer *httpServer;
     LinkHelper *linkHelper;
     HalJsonSerializer *serializer;
+    HalJsonParser *parser;
 
     Server *q;
 };
@@ -48,6 +50,9 @@ Server::Server(QObject *parent) :
 
     d->serializer = new HalJsonSerializer;
     Serializer::registerSerializer(d->serializer);
+
+    d->parser = new HalJsonParser;
+    Parser::registerParser(d->parser);
 
     d->linkHelper = new LinkHelper(this);
 }

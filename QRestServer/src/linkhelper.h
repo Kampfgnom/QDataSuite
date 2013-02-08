@@ -23,6 +23,7 @@ public:
 
     QDataSuite::AbstractDataAccessObject *resolveCollectionPath(const QString &path);
     QObject *resolveObjectPath(const QString &path);
+    QObject *resolveObjectLink(const QUrl &link);
 
     QString collectionName(const QString &path);
     QVariant objectKey(const QString &path);

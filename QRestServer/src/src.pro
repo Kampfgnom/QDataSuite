@@ -43,7 +43,8 @@ HEADERS += \
     responder.h \
     serializer.h \
     parser.h \
-    haljsonserializer.h
+    haljsonserializer.h \
+    haljsonparser.h
 
 SOURCES += \
     server.cpp \
@@ -51,4 +52,5 @@ SOURCES += \
     responder.cpp \
     serializer.cpp \
     parser.cpp \
-    haljsonserializer.cpp
+    haljsonserializer.cpp \
+    haljsonparser.cpp

@@ -73,6 +73,11 @@ QObject *LinkHelper::resolveObjectPath(const QString &path)
     return collection->readObject(key);
 }
 
+QObject *LinkHelper::resolveObjectLink(const QUrl &link)
+{
+    return resolveObjectPath(link.path());
+}
+
 QString LinkHelper::collectionName(const QString &path)
 {
     QStringList pathList = path.split('/');
