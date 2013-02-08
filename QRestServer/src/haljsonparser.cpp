@@ -73,6 +73,9 @@ void HalJsonParser::parse(const QByteArray &data, QObject *object, Server *serve
             continue;
 
         if(link.isList()) {
+            if(!property.isToManyRelationProperty())
+                continue;
+
             QList<QObject *> relatedObjects;
             for(int i = 0; i < link.count(); ++i) {
                 QObject *relatedObject = server->linkHelper()->resolveObjectLink(link[i].href());
@@ -83,6 +86,9 @@ void HalJsonParser::parse(const QByteArray &data, QObject *object, Server *serve
             property.write(object, value);
         }
         else {
+            if(!property.isToOneRelationProperty())
+                continue;
+
             QObject *relatedObject = server->linkHelper()->resolveObjectLink(link.href());
             QVariant value = QDataSuite::MetaObject::variantCast(relatedObject, property.reverseClassName());
             property.write(object, value);
