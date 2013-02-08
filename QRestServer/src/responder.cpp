@@ -133,12 +133,12 @@ void ResponderPrivate::createObject()
         return;
     }
 
-    QDataSuite::MetaObject metaObject = QDataSuite::MetaObject::metaObject(object);
+    QDataSuite::MetaObject metaObject = QDataSuite::MetaObject::metaObject(newObject);
     QDataSuite::MetaProperty keyMetaProperty = metaObject.primaryKeyProperty();
 
     if (!keyMetaProperty.isAutoIncremented()) {
-        QString key = keyMetaProperty.read(object).toString();
-        if (key.isEmpty()) {
+        QVariant key = keyMetaProperty.read(newObject);
+        if (key.isNull()) {
             serveError(QByteArray("The collection has no auto-generated key. You have to specify a key to create a new object."),
                        QHttpResponse::STATUS_INTERNAL_SERVER_ERROR);
             delete newObject;

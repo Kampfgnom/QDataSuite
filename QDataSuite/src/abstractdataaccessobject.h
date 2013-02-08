@@ -34,6 +34,7 @@ public:
 protected:
     explicit AbstractDataAccessObject(QObject *parent = 0);
     void setLastError(const QDataSuite::Error &error) const;
+    void resetLastError() const;
 
 private:
     Q_DISABLE_COPY(AbstractDataAccessObject)

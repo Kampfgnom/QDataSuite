@@ -34,6 +34,11 @@ void AbstractDataAccessObject::setLastError(const Error &error) const
     d->lastError = error;
 }
 
+void AbstractDataAccessObject::resetLastError() const
+{
+    setLastError(QDataSuite::Error());
+}
+
 } // namespace QDataSuite
 
 uint qHash( const QVariant & var )

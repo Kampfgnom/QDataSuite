@@ -2,6 +2,7 @@
 
 #include <QDataSuite/metaproperty.h>
 #include <QDataSuite/metaobject.h>
+#include <QDataSuite/error.h>
 
 #include <QDebug>
 
@@ -23,12 +24,14 @@ MetaObject SimpleDataAccessObject<T>::dataSuiteMetaObject() const
 template<class T>
 QList<QVariant> SimpleDataAccessObject<T>::allKeys() const
 {
+    resetLastError();
     return m_objects.keys();
 }
 
 template<class T>
 QList<T *> SimpleDataAccessObject<T>::readAll() const
 {
+    resetLastError();
     return m_objects.values();
 }
 
@@ -43,6 +46,7 @@ QList<QObject *> SimpleDataAccessObject<T>::readAllObjects() const
 template<class T>
 T *SimpleDataAccessObject<T>::create() const
 {
+    resetLastError();
     return new T;
 }
 
@@ -55,6 +59,7 @@ QObject *SimpleDataAccessObject<T>::createObject() const
 template<class T>
 T *SimpleDataAccessObject<T>::read(const QVariant &key) const
 {
+    resetLastError();
     int type = m_metaObject.primaryKeyProperty().type();
     Q_ASSERT(key.canConvert(type));
 
@@ -73,7 +78,15 @@ QObject *SimpleDataAccessObject<T>::readObject(const QVariant &key) const
 template<class T>
 bool SimpleDataAccessObject<T>::insert(T * const object)
 {
-    m_objects.insert(m_metaObject.primaryKeyProperty().read(object), object);
+    resetLastError();
+    QVariant key = m_metaObject.primaryKeyProperty().read(object);
+    if(m_objects.contains(key)) {
+        setLastError(QDataSuite::Error("An object with this key already exists.",
+                                       QDataSuite::Error::StorageError));
+        return false;
+    }
+
+    m_objects.insert(key, object);
     return true;
 }
 
@@ -88,6 +101,7 @@ bool SimpleDataAccessObject<T>::insertObject(QObject *const object)
 template<class T>
 bool SimpleDataAccessObject<T>::update(T *const object)
 {
+    resetLastError();
     return m_objects.contains(m_metaObject.primaryKeyProperty().read(object));
 }
 
@@ -102,6 +116,7 @@ bool SimpleDataAccessObject<T>::updateObject(QObject *const object)
 template<class T>
 bool SimpleDataAccessObject<T>::remove(T *const object)
 {
+    resetLastError();
     QVariant key = m_metaObject.primaryKeyProperty().read(object);
     bool ok = m_objects.contains(key);
     if(ok) m_objects.remove(key);

@@ -19,6 +19,7 @@ public:
         ParserError,
         SerializerError,
         ServerError,
+        StorageError,
         UserError = 1024
     };
 
