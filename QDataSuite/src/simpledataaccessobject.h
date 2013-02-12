@@ -17,6 +17,7 @@ public:
 
     QDataSuite::MetaObject dataSuiteMetaObject() const Q_DECL_OVERRIDE;
 
+    int count() const Q_DECL_OVERRIDE;
     QList<QVariant> allKeys() const Q_DECL_OVERRIDE;
     QList<QObject *> readAllObjects() const Q_DECL_OVERRIDE;
     QObject *createObject() const Q_DECL_OVERRIDE;

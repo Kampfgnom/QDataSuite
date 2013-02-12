@@ -92,7 +92,7 @@ void DatabaseSchema::createTable(const QMetaObject *metaObject)
             }
 
             if(metaProperty.isAutoIncremented()) {
-                columnType.append(QLatin1String(" AUTO INCREMENT"));
+                columnType.append(QLatin1String(" AUTOINCREMENT"));
             }
 
             d->query.addField(columnName, columnType);

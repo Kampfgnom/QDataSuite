@@ -36,6 +36,11 @@ QDataSuite::MetaObject PersistentDataAccessObjectBase::dataSuiteMetaObject() con
     return d->metaObject;
 }
 
+int PersistentDataAccessObjectBase::count() const
+{
+    return d->sqlDataAccessObjectHelper->count(d->metaObject);
+}
+
 QList<QVariant> PersistentDataAccessObjectBase::allKeys() const
 {
     QList<QVariant> result = d->sqlDataAccessObjectHelper->allKeys(d->metaObject);
@@ -73,6 +78,7 @@ bool PersistentDataAccessObjectBase::insertObject(QObject * const object)
         return false;
     }
 
+    emit objectInserted(object);
     return true;
 }
 
@@ -83,6 +89,7 @@ bool PersistentDataAccessObjectBase::updateObject(QObject *const object)
         return false;
     }
 
+    emit objectUpdated(object);
     return true;
 }
 
@@ -93,6 +100,7 @@ bool PersistentDataAccessObjectBase::removeObject(QObject *const object)
         return false;
     }
 
+    emit objectRemoved(object);
     return true;
 }
 

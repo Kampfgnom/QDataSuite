@@ -21,6 +21,7 @@ public:
 
     virtual QDataSuite::MetaObject dataSuiteMetaObject() const = 0;
 
+    virtual int count() const = 0;
     virtual QList<QVariant> allKeys() const = 0;
     virtual QList<QObject *> readAllObjects() const = 0;
     virtual QObject *createObject() const = 0;
@@ -30,6 +31,11 @@ public:
     virtual bool removeObject(QObject *const object) = 0;
 
     QDataSuite::Error lastError() const;
+
+Q_SIGNALS:
+    void objectInserted(QObject *);
+    void objectUpdated(QObject *);
+    void objectRemoved(QObject *);
 
 protected:
     explicit AbstractDataAccessObject(QObject *parent = 0);

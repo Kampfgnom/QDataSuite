@@ -27,6 +27,7 @@ public:
 
     static SqlDataAccessObjectHelper *forDatabase(const QSqlDatabase &database = QSqlDatabase::database());
 
+    int count(const QDataSuite::MetaObject &metaObject) const;
     QList<QVariant> allKeys(const QDataSuite::MetaObject &metaObject) const;
     bool readObject(const QDataSuite::MetaObject &metaObject, const QVariant &key, QObject *object);
     bool insertObject(const QDataSuite::MetaObject &metaObject, QObject *object);

@@ -88,6 +88,22 @@ SqlDataAccessObjectHelper *SqlDataAccessObjectHelper::forDatabase(const QSqlData
     return SqlDataAccessObjectHelperPrivate::helpersForConnection.value(database.connectionName());
 }
 
+int SqlDataAccessObjectHelper::count(const QDataSuite::MetaObject &metaObject) const
+{
+    SqlQuery query(d->database);
+    query.prepare(QString("SELECT COUNT(*) FROM %1")
+                  .arg(metaObject.tableName()));
+
+    if ( !query.exec()
+         || !query.first()
+         || query.lastError().isValid()) {
+        setLastError(query);
+        return 0;
+    }
+
+    return query.value(0).toInt();
+}
+
 QList<QVariant> SqlDataAccessObjectHelper::allKeys(const QDataSuite::MetaObject &metaObject) const
 {
     qDebug("\n\nallKeys<%s>", qPrintable(metaObject.tableName()));
@@ -195,7 +211,9 @@ void SqlDataAccessObjectHelper::fillValuesIntoQuery(const QDataSuite::MetaObject
 {
     // Add simple properties
     foreach(const QDataSuite::MetaProperty property, metaObject.simpleProperties()) {
-        query.addField(property.columnName(), property.read(object));
+        if(!property.isAutoIncremented()) {
+            query.addField(property.columnName(), property.read(object));
+        }
     }
 
     // Add relation properties

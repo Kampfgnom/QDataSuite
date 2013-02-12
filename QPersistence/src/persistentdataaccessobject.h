@@ -31,6 +31,7 @@ public:
     SqlDataAccessObjectHelper *sqlDataAccessObjectHelper() const;
     QDataSuite::MetaObject dataSuiteMetaObject() const;
 
+    int count() const Q_DECL_OVERRIDE;
     QList<QVariant> allKeys() const Q_DECL_OVERRIDE;
     QList<QObject *> readAllObjects() const Q_DECL_OVERRIDE;
     QObject *readObject(const QVariant &key) const Q_DECL_OVERRIDE;

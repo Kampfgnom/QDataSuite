@@ -20,6 +20,11 @@ MetaObject SimpleDataAccessObject<T>::dataSuiteMetaObject() const
     return m_metaObject;
 }
 
+template<class T>
+int SimpleDataAccessObject<T>::count() const
+{
+    return m_objects.size();
+}
 
 template<class T>
 QList<QVariant> SimpleDataAccessObject<T>::allKeys() const
@@ -87,6 +92,7 @@ bool SimpleDataAccessObject<T>::insert(T * const object)
     }
 
     m_objects.insert(key, object);
+    emit objectInserted(object);
     return true;
 }
 
@@ -102,7 +108,10 @@ template<class T>
 bool SimpleDataAccessObject<T>::update(T *const object)
 {
     resetLastError();
-    return m_objects.contains(m_metaObject.primaryKeyProperty().read(object));
+    bool ok = m_objects.contains(m_metaObject.primaryKeyProperty().read(object));
+    if(ok)
+        emit objectUpdated(object);
+    return ok;
 }
 
 template<class T>
@@ -119,7 +128,10 @@ bool SimpleDataAccessObject<T>::remove(T *const object)
     resetLastError();
     QVariant key = m_metaObject.primaryKeyProperty().read(object);
     bool ok = m_objects.contains(key);
-    if(ok) m_objects.remove(key);
+    if(ok) {
+        m_objects.remove(key);
+        emit objectRemoved(object);
+    }
     return ok;
 }
 
