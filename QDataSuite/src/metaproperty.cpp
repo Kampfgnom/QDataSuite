@@ -142,30 +142,39 @@ bool MetaProperty::isToManyRelationProperty() const
 
 MetaProperty::Cardinality MetaProperty::cardinality() const
 {
-    MetaProperty reverse = reverseMetaObject().metaProperty(reverseRelationName());
-
-    if(isToOneRelationProperty()) {
-        if(!reverse.isValid() ||
-                QString(reverse.typeName()).isEmpty()) {
+    QString reverseName = reverseRelationName();
+    if(reverseName.isEmpty()) {
+        if(isToOneRelationProperty())
             return ToOneCardinality;
-        }
-        else if(reverse.isToOneRelationProperty()) {
-            return OneToOneCardinality;
-        }
-        else if(reverse.isToManyRelationProperty()) {
-            return ManyToOneCardinality;
-        }
-    }
-    else if(isToManyRelationProperty()) {
-        if(!reverse.isValid() ||
-                QString(reverse.typeName()).isEmpty()) {
+        else if(isToManyRelationProperty())
             return ToManyCardinality;
+    }
+    else {
+        MetaProperty reverse = reverseMetaObject().metaProperty(reverseName);
+
+        if(isToOneRelationProperty()) {
+            if(!reverse.isValid() ||
+                    QString(reverse.typeName()).isEmpty()) {
+                return ToOneCardinality;
+            }
+            else if(reverse.isToOneRelationProperty()) {
+                return OneToOneCardinality;
+            }
+            else if(reverse.isToManyRelationProperty()) {
+                return ManyToOneCardinality;
+            }
         }
-        else if(reverse.isToManyRelationProperty()) {
-            return ManyToManyCardinality;
-        }
-        else if(reverse.isToOneRelationProperty()) {
-            return OneToManyCardinality;
+        else if(isToManyRelationProperty()) {
+            if(!reverse.isValid() ||
+                    QString(reverse.typeName()).isEmpty()) {
+                return ToManyCardinality;
+            }
+            else if(reverse.isToManyRelationProperty()) {
+                return ManyToManyCardinality;
+            }
+            else if(reverse.isToOneRelationProperty()) {
+                return OneToManyCardinality;
+            }
         }
     }
 

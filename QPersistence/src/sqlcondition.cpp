@@ -26,6 +26,7 @@ SqlCondition::SqlCondition(const QString &key, SqlCondition::ComparisonOperator 
     d(new SqlConditionData)
 {
     d->key = key;
+    d->booleanOperator = And;
     d->comparisonOperator = op;
     d->value = value;
 }
@@ -35,12 +36,13 @@ SqlCondition::SqlCondition(SqlCondition::BooleanOperator op, const QList<SqlCond
 {
     d->booleanOperator = op;
     d->conditions = conditions;
+    d->comparisonOperator = EqualTo;
 }
 
 bool SqlCondition::isValid() const
 {
     return !d->key.isEmpty()
-            || (d->booleanOperator == Or
+            || (d->booleanOperator == Not
                 && d->conditions.size() == 1)
             || !d->conditions.isEmpty();
 }
