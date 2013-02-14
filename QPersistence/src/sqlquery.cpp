@@ -91,6 +91,7 @@ void SqlQuery::clear()
     d->limit = -1;
     d->whereCondition = SqlCondition();
     d->orderBy.clear();
+    d->foreignKeys.clear();
 }
 
 void SqlQuery::setTable(const QString &table)
