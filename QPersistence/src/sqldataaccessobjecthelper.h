@@ -37,9 +37,6 @@ public:
 
     QDataSuite::Error lastError() const;
 
-    void registerPersistentDataAccessObject(const QString &className, PersistentDataAccessObjectBase *dataAccessObject);
-    PersistentDataAccessObjectBase *persistentDataAccessObject(const QDataSuite::MetaObject &metaObject);
-
 private:
     QSharedDataPointer<SqlDataAccessObjectHelperPrivate> d;
 

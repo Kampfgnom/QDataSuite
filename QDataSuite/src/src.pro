@@ -19,10 +19,12 @@ HEADERS += \
     error.h \
     metaobject.h \
     abstractdataaccessobject.h \
-    simpledataaccessobject.h
+    simpledataaccessobject.h \
+    cacheddataaccessobject.h
 SOURCES += \
     metaproperty.cpp \
     error.cpp \
     metaobject.cpp \
     abstractdataaccessobject.cpp \
-    simpledataaccessobject.cpp
+    simpledataaccessobject.cpp \
+    cacheddataaccessobject.cpp

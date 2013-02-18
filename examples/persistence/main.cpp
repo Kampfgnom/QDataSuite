@@ -25,8 +25,8 @@ int main(int argc, char *argv[])
     QDataSuite::registerMetaObject<Season>();
     QPersistence::PersistentDataAccessObject<Series> seriesDao(db);
     QPersistence::PersistentDataAccessObject<Season> seasonDao(db);
-    QPersistence::registerPersistentDataAccessObject<Series>(&seriesDao);
-    QPersistence::registerPersistentDataAccessObject<Season>(&seasonDao);
+    QDataSuite::registerDataAccessObject<Series>(&seriesDao, db.connectionName());
+    QDataSuite::registerDataAccessObject<Season>(&seasonDao, db.connectionName());
 
     // Drop and create tables
     QPersistence::DatabaseSchema databaseSchema(db);

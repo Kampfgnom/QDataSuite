@@ -1,6 +1,7 @@
 #include "metaobject.h"
 
 #include "metaproperty.h"
+#include "abstractdataaccessobject.h"
 
 #include <QString>
 #include <QDebug>
@@ -20,12 +21,15 @@ public:
     static QHash<int, ConverterBase *> convertersByUserType;
     static QHash<QString, ConverterBase *> convertersByClassName;
 
+    static QHash<QString, QHash<QString, AbstractDataAccessObject *> > daoPerConnectionAndMetaObject;
+
     void parseClassInfo();
 };
 
 QHash<QString, MetaObject> MetaObjectPrivate::metaObjects;
 QHash<int, ConverterBase *> MetaObjectPrivate::convertersByUserType;
 QHash<QString, ConverterBase *> MetaObjectPrivate::convertersByClassName;
+QHash<QString, QHash<QString, AbstractDataAccessObject *> > MetaObjectPrivate::daoPerConnectionAndMetaObject;
 
 void MetaObjectPrivate::parseClassInfo()
 {
@@ -73,6 +77,16 @@ MetaObject MetaObject::metaObject(const QObject *object)
     Q_ASSERT(object);
 
     return MetaObjectPrivate::metaObjects.value(QLatin1String(object->metaObject()->className()));
+}
+
+void MetaObject::registerDataAccessObject(AbstractDataAccessObject *dao, const QString &connection)
+{
+    MetaObjectPrivate::daoPerConnectionAndMetaObject[connection][dao->dataSuiteMetaObject().className()] = dao;
+}
+
+AbstractDataAccessObject *MetaObject::dataAccessObject(const MetaObject &mo, const QString &connection)
+{
+    return MetaObjectPrivate::daoPerConnectionAndMetaObject[connection][mo.className()];
 }
 
 QList<MetaObject> MetaObject::registeredMetaObjects()

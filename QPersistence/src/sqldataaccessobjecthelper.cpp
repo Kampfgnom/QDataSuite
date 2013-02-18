@@ -29,34 +29,11 @@ public:
 
     QSqlDatabase database;
     mutable QDataSuite::Error lastError;
-    QHash<QString, PersistentDataAccessObjectBase *> persistentDataAccessObjects;
 
     static QHash<QString, SqlDataAccessObjectHelper *> helpersForConnection;
 };
 
 QHash<QString, SqlDataAccessObjectHelper *> SqlDataAccessObjectHelperPrivate::helpersForConnection;
-
-void SqlDataAccessObjectHelper::registerPersistentDataAccessObject(const QString &className,
-                                                                   PersistentDataAccessObjectBase *dataAccessObject)
-{
-    Q_ASSERT_X(!d->persistentDataAccessObjects.contains(className),
-               Q_FUNC_INFO,
-               QString("Persistent data access object %1 already registered.")
-               .arg(className).toLatin1());
-
-    d->persistentDataAccessObjects.insert(className, dataAccessObject);
-}
-
-PersistentDataAccessObjectBase *SqlDataAccessObjectHelper::persistentDataAccessObject(const QDataSuite::MetaObject &metaObject)
-{
-    QString className = QLatin1String(metaObject.className());
-    Q_ASSERT_X(d->persistentDataAccessObjects.contains(className),
-               Q_FUNC_INFO,
-               QString("No such persistent data access object %1. You have to register your objects.")
-               .arg(metaObject.className()).toLatin1());
-
-    return d->persistentDataAccessObjects.value(className);
-}
 
 SqlDataAccessObjectHelper::SqlDataAccessObjectHelper(const QSqlDatabase &database, QObject *parent) :
     QObject(parent),
@@ -334,8 +311,8 @@ bool SqlDataAccessObjectHelper::readRelatedObjects(const QDataSuite::MetaObject 
         QDataSuite::MetaProperty::Cardinality cardinality = property.cardinality();
 
         QString className = property.reverseClassName();
-        PersistentDataAccessObjectBase *persistentDataAccessObject = d->persistentDataAccessObjects.value(className);
-        if(!persistentDataAccessObject)
+        QDataSuite::AbstractDataAccessObject *dao = QDataSuite::MetaObject::dataAccessObject(property.reverseMetaObject(), d->database.connectionName());
+        if(!dao)
             continue;
 
         // Get the already read objects of the related table
@@ -353,18 +330,7 @@ bool SqlDataAccessObjectHelper::readRelatedObjects(const QDataSuite::MetaObject 
                 relatedObject = alreadyReadRelatedObjects.value(foreignKey);
             }
             else {
-                relatedObject = persistentDataAccessObject->readObject(foreignKey);
-            }
-
-            // If the related object has no parent yet,
-            // and is not itself,
-            // and is not the root of the object graph, which will be build,
-            // set our object as parent
-            if(relatedObject
-                    && !relatedObject->parent()
-                    && relatedObject != object
-                    && relatedObject != objectGraphRoot) {
-                relatedObject->setParent(object);
+                relatedObject = dao->readObject(foreignKey);
             }
 
             QVariant value = QDataSuite::MetaObject::variantCast(relatedObject, className);
@@ -398,7 +364,7 @@ bool SqlDataAccessObjectHelper::readRelatedObjects(const QDataSuite::MetaObject 
                     relatedObject = alreadyReadRelatedObjects.value(foreignKey);
                 }
                 else {
-                    relatedObject = persistentDataAccessObject->readObject(foreignKey);
+                    relatedObject = dao->readObject(foreignKey);
                 }
                 relatedObjects.append(relatedObject);
             }
@@ -414,8 +380,10 @@ bool SqlDataAccessObjectHelper::readRelatedObjects(const QDataSuite::MetaObject 
     }
 
     // clear the caches
-    alreadyReadObjectsPerTable.clear();
-    objectGraphRoot = 0;
+    if(object == objectGraphRoot) {
+        alreadyReadObjectsPerTable.clear();
+        objectGraphRoot = 0;
+    }
 
     return true;
 }

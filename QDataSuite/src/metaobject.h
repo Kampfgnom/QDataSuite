@@ -29,6 +29,7 @@ namespace QDataSuite {
 
 class MetaProperty;
 class ConverterBase;
+class AbstractDataAccessObject;
 
 class MetaObjectPrivate;
 class MetaObject : public QMetaObject
@@ -63,6 +64,9 @@ public:
     static MetaObject metaObject(const QMetaObject &metaObject);
     static MetaObject metaObject(const QString &className);
     static MetaObject metaObject(const QObject *object);
+
+    static void registerDataAccessObject(AbstractDataAccessObject *dao, const QString &connection);
+    static AbstractDataAccessObject *dataAccessObject(const MetaObject &mo, const QString &connection);
 
 private:
     QSharedDataPointer<MetaObjectPrivate> d;
@@ -131,6 +135,12 @@ void registerMetaObject()
 
     v = QVariant::fromValue<QList<T *> >(QList<T *>());
     MetaObject::registerConverter(v.userType(), converter);
+}
+
+template<class T>
+void registerDataAccessObject(QDataSuite::AbstractDataAccessObject *dataAccessObject, const QString &connectionName)
+{
+    MetaObject::registerDataAccessObject(dataAccessObject, connectionName);
 }
 
 } // namespace QDataSuite

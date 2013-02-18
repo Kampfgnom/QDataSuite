@@ -69,14 +69,6 @@ public:
     bool remove(T *const object) { return removeObject(object); }
 };
 
-template<class T>
-void registerPersistentDataAccessObject(PersistentDataAccessObjectBase *dataAccessObject)
-{
-    dataAccessObject->sqlDataAccessObjectHelper()->registerPersistentDataAccessObject(
-                QLatin1String(dataAccessObject->dataSuiteMetaObject().className()),
-                dataAccessObject);
-}
-
 } // namespace QPersistence
 
 #endif // QPERSISTENCE_PERSISTENTDATAACCESSOBJECT_H
