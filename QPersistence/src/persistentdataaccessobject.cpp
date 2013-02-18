@@ -95,7 +95,7 @@ bool PersistentDataAccessObjectBase::updateObject(QObject *const object)
 
 bool PersistentDataAccessObjectBase::removeObject(QObject *const object)
 {
-    if(d->sqlDataAccessObjectHelper->removeObject(d->metaObject, object)) {
+    if(!d->sqlDataAccessObjectHelper->removeObject(d->metaObject, object)) {
         setLastError(d->sqlDataAccessObjectHelper->lastError());
         return false;
     }

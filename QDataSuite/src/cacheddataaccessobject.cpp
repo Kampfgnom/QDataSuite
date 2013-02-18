@@ -182,9 +182,9 @@ bool CachedDataAccessObject<T>::remove(T *const object)
         return false;
     }
 
-    m_cache.remove(key);
-
     emit objectRemoved(object);
+
+    m_cache.remove(key);
     return true;
 }
 
