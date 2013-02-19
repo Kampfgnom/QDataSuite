@@ -146,6 +146,7 @@ void Server::dispatchRequest(QHttpRequest *req, QHttpResponse *resp)
 
 QString Server::formatFromRequest(QHttpRequest *req)
 {
+    Q_UNUSED(req)
     return QString();
 }
 

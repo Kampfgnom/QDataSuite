@@ -16,7 +16,7 @@ TARGET          = restserver_example
 VERSION         = 0.0.0
 TEMPLATE        = app
 QT              += sql widgets network
-CONFIG          += static libc++11
+CONFIG          += static c++11
 QMAKE_CXXFLAGS  += $$QDATASUITE_COMMON_QMAKE_CXXFLAGS
 
 

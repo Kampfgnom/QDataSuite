@@ -13,7 +13,7 @@ TARGET          = persistence_example
 VERSION         = 0.0.0
 TEMPLATE        = app
 QT              += sql widgets
-CONFIG          += static libc++11
+CONFIG          += c++11
 QMAKE_CXXFLAGS  += $$QDATASUITE_COMMON_QMAKE_CXXFLAGS
 
 
