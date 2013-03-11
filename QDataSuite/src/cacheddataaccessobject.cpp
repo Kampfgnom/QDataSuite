@@ -11,7 +11,9 @@ namespace QDataSuite {
 template<class T>
 CachedDataAccessObject<T>::CachedDataAccessObject(AbstractDataAccessObject *source, QObject *parent) :
     AbstractDataAccessObject(parent),
-    m_source(source)
+    m_source(source),
+    m_cachedCount(-1),
+    m_cachedAll(false)
 {}
 
 template<class T>
@@ -37,6 +39,14 @@ void CachedDataAccessObject<T>::insertIntoCache(const QVariant &key, T *object) 
 
     QSharedPointer<T> p(object);
     m_cache.insert(key, p);
+
+    if(!m_cachedAll) {
+        int c = m_cache.size();
+        if(c == count()) {
+            m_cachedAll = true;
+            m_cachedCount = c;
+        }
+    }
 }
 
 template<class T>
@@ -48,13 +58,22 @@ MetaObject CachedDataAccessObject<T>::dataSuiteMetaObject() const
 template<class T>
 int CachedDataAccessObject<T>::count() const
 {
-    return m_source->count();
+    if(m_cachedCount >= 0)
+        return m_cachedCount;
+
+    int c = m_source->count();
+    m_cachedCount = c;
+    return c;
 }
 
 template<class T>
 QList<QVariant> CachedDataAccessObject<T>::allKeys() const
 {
     resetLastError();
+
+    if(m_cachedAll)
+        return m_cache.keys();
+
     return m_source->allKeys();
 }
 
@@ -64,15 +83,23 @@ QList<T *> CachedDataAccessObject<T>::readAll() const
     resetLastError();
 
     QList<T *> result;
-    Q_FOREACH(QVariant key, allKeys()) {
-        T *t = getFromCache(key);
 
-        if(!t) {
-            t = static_cast<T *>(m_source->readObject(key));
-            insertIntoCache(key, t);
+    if(m_cachedAll) {
+        Q_FOREACH(QSharedPointer<T> t, m_cache.values()) {
+            result.append(t.data());
         }
+    }
+    else {
+        Q_FOREACH(QVariant key, allKeys()) {
+            T *t = getFromCache(key);
 
-        result.append(t);
+            if(!t) {
+                t = static_cast<T *>(m_source->readObject(key));
+                insertIntoCache(key, t);
+            }
+
+            result.append(t);
+        }
     }
 
     return result;
@@ -131,6 +158,7 @@ bool CachedDataAccessObject<T>::insert(T * const object)
     }
 
     QVariant key = dataSuiteMetaObject().primaryKeyProperty().read(object);
+    ++m_cachedCount;
     insertIntoCache(key, object);
 
     emit objectInserted(object);
@@ -182,6 +210,7 @@ bool CachedDataAccessObject<T>::remove(T *const object)
         return false;
     }
 
+    --m_cachedCount;
     emit objectRemoved(object);
 
     m_cache.remove(key);

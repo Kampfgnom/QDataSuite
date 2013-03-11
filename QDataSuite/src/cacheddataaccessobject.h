@@ -31,9 +31,14 @@ public:
     bool update(T *const object);
     bool remove(T *const object);
 
+    void cacheAll();
+
 private:
     mutable QHash<QVariant, QSharedPointer<T> > m_cache;
     AbstractDataAccessObject *m_source;
+
+    mutable int m_cachedCount;
+    mutable bool m_cachedAll;
 
     T *getFromCache(const QVariant &key) const;
     void insertIntoCache(const QVariant &key, T *object) const;
